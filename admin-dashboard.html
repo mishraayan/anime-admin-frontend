@@ -90,7 +90,7 @@
         const res = await fetch(endpoint, {
           method,
           headers: {
-            'x-auth-token': localStorage.getItem('token')
+            'x-auth-token': localStorage.getItem('admintoken')
           },
           body: formData
         });
@@ -160,7 +160,7 @@
       try {
         const res = await fetch(`https://anime-backend-5emf.onrender.com/api/animes/${id}`, {
           method: 'DELETE',
-          headers: { 'x-auth-token': localStorage.getItem('token') }
+          headers: { 'x-auth-token': localStorage.getItem('admintoken') }
         });
         if (res.ok) fetchAnimes();
         else alert('Failed to delete anime.');
