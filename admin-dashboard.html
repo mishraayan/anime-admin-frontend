@@ -38,6 +38,8 @@
         <div class="mb-3">
           <label class="form-label">Video File (.mp4)</label>
           <input type="file" class="form-control" id="video" accept="video/mp4">
+          <label for="videoUrl" class="form-label">Paste Video URL</label>
+          <input type="text" id="videoUrl" class="form-control" placeholder="Paste Cloudinary/YouTube video URL" required />
         </div>
         <button type="submit" class="btn btn-primary w-100">Save Anime</button>
       </form>
@@ -66,7 +68,18 @@
       formData.append('genre', document.getElementById('genre').value);
       formData.append('releaseDate', document.getElementById('releaseDate').value);
       const videoFile = document.getElementById('video').files[0];
-      if (videoFile) formData.append('video', videoFile);
+      const videoUrl = document.getElementById('videoUrl').value.trim();
+
+       if (videoFile) {
+    formData.append('video', videoFile);
+  } else if (videoUrl) {
+    formData.append('videoUrl', videoUrl); // let backend handle this
+  } else {
+    responseBox.className = 'mt-4 alert alert-warning';
+    responseBox.textContent = 'Please upload a video or enter a video URL.';
+    responseBox.classList.remove('d-none');
+    return;
+  }
 
       const method = animeId ? 'PUT' : 'POST';
       const endpoint = animeId
