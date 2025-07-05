@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Dashboard - Add & Manage Animes</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+  <div class="container mt-5">
+    <div class="card shadow-lg p-4 mb-5">
+      <div class="container my-3 d-flex justify-content-end">
+  <button class="btn btn-danger btn-sm" onclick="logoutAdmin()">Logout</button>
+</div>
+      <h2 class="text-center mb-4">Admin Dashboard - Upload Anime</h2>
+      <form id="animeForm">
+        <input type="hidden" id="animeId">
+        <div class="mb-3">
+          <label class="form-label">Title</label>
+          <input type="text" class="form-control" id="title" required>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Description</label>
+          <textarea class="form-control" id="description" rows="3" required></textarea>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Image URL</label>
+          <input type="url" class="form-control" id="imageUrl" required>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Genre (comma-separated)</label>
+          <input type="text" class="form-control" id="genre" required>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Release Date</label>
+          <input type="date" class="form-control" id="releaseDate" required>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Video File (.mp4)</label>
+          <input type="file" class="form-control" id="video" accept="video/mp4">
+        </div>
+        <button type="submit" class="btn btn-primary w-100">Save Anime</button>
+      </form>
+      <div class="mt-4 alert d-none" id="responseBox"></div>
+    </div>
+
+    <div class="card shadow p-4">
+      <h3 class="mb-4">Uploaded Animes</h3>
+      <div id="animeList" class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4"></div>
+    </div>
+  </div>
+
+  <script>
+    const form = document.getElementById('animeForm');
+    const responseBox = document.getElementById('responseBox');
+    const animeList = document.getElementById('animeList');
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const animeId = document.getElementById('animeId').value;
+      const formData = new FormData();
+      formData.append('title', document.getElementById('title').value);
+      formData.append('description', document.getElementById('description').value);
+      formData.append('imageUrl', document.getElementById('imageUrl').value);
+      formData.append('genre', document.getElementById('genre').value);
+      formData.append('releaseDate', document.getElementById('releaseDate').value);
+      const videoFile = document.getElementById('video').files[0];
+      if (videoFile) formData.append('video', videoFile);
+
+      const method = animeId ? 'PUT' : 'POST';
+      const endpoint = animeId
+        ? `https://anime-backend-5emf.onrender.com/api/animes/${animeId}`
+        : 'https://anime-backend-5emf.onrender.com/api/animes/upload';
+
+      try {
+        const res = await fetch(endpoint, {
+          method,
+          headers: {
+            'x-auth-token': localStorage.getItem('token')
+          },
+          body: formData
+        });
+
+        const data = await res.json();
+        if (res.ok) {
+          responseBox.className = 'mt-4 alert alert-success';
+          responseBox.textContent = animeId ? 'Anime updated!' : 'Anime uploaded successfully!';
+          form.reset();
+          document.getElementById('animeId').value = '';
+          fetchAnimes();
+        } else {
+          responseBox.className = 'mt-4 alert alert-danger';
+          responseBox.textContent = data.error || data.msg || 'Failed.';
+        }
+      } catch (err) {
+        responseBox.className = 'mt-4 alert alert-danger';
+        responseBox.textContent = 'Error submitting anime.';
+      }
+
+      responseBox.classList.remove('d-none');
+    });
+
+    async function fetchAnimes() {
+      try {
+        const res = await fetch('https://anime-backend-5emf.onrender.com/api/animes');
+        const animes = await res.json();
+
+        animeList.innerHTML = '';
+        animes.forEach(anime => {
+          animeList.innerHTML += `
+            <div class="col">
+              <div class="card h-100">
+                <img src="${anime.imageUrl}" class="card-img-top" alt="${anime.title}">
+                <div class="card-body">
+                  <h5 class="card-title">${anime.title}</h5>
+                  <p class="card-text">${anime.description}</p>
+                  <p class="text-muted"><strong>Genres:</strong> ${anime.genre.join(', ')}</p>
+                  <p class="text-muted"><strong>Release:</strong> ${new Date(anime.releaseDate).toDateString()}</p>
+                </div>
+                <div class="card-footer d-flex gap-2">
+                  <a href="${anime.videoUrl}" target="_blank" class="btn btn-sm btn-outline-primary">Watch</a>
+                  <button class="btn btn-sm btn-outline-secondary" onclick='editAnime(${JSON.stringify(anime)})'>Edit</button>
+                  <button class="btn btn-sm btn-outline-danger" onclick='deleteAnime("${anime._id}")'>Delete</button>
+                </div>
+              </div>
+            </div>
+          `;
+        });
+      } catch (error) {
+        console.error('Failed to load animes:', error);
+      }
+    }
+
+    function editAnime(anime) {
+      document.getElementById('animeId').value = anime._id;
+      document.getElementById('title').value = anime.title;
+      document.getElementById('description').value = anime.description;
+      document.getElementById('imageUrl').value = anime.imageUrl;
+      document.getElementById('genre').value = anime.genre.join(',');
+      document.getElementById('releaseDate').value = anime.releaseDate.split('T')[0];
+    }
+
+    async function deleteAnime(id) {
+      if (!confirm('Are you sure you want to delete this anime?')) return;
+
+      try {
+        const res = await fetch(`https://anime-backend-5emf.onrender.com/api/animes/${id}`, {
+          method: 'DELETE',
+          headers: { 'x-auth-token': localStorage.getItem('token') }
+        });
+        if (res.ok) fetchAnimes();
+        else alert('Failed to delete anime.');
+      } catch (err) {
+        alert('Error deleting anime.');
+      }
+    }
+
+    fetchAnimes();
+   window.onload = () => {
+  const token = localStorage.getItem('adminToken');
+  if (!token) {
+    alert('Unauthorized access. Please login as admin.');
+    window.location.href = 'admin-login.html';
+  }
+};
+
+
+  function logoutAdmin() {
+  localStorage.removeItem('adminToken');  // Remove token
+  window.location.href = 'admin-login.html';  // Redirect to login
+}
+
+  </script>
+</body>
+</html>
